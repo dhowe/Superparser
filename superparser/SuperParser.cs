@@ -12,12 +12,12 @@ using System.Collections.Generic;
 
 namespace SuperParser
 {
-    public class SuperTokenizer
+    public static class SuperTokenizer
     {
-        static void Main(string[] args)
+        static void MainX(string[] args)
         {
             string input = "((a | b) | c)";
-            var tokens = SuperTokenizer.Instance.Tokenize(input);
+            var tokens = SuperTokenizer.Tokenize(input);
             var result = SuperParser.GroupParser.TryParse(tokens);
             if (result.HasValue)
             {
@@ -28,28 +28,35 @@ namespace SuperParser
             }
             else
             {
-                Console.WriteLine("FAILED: "+result.ErrorMessage);
+                Console.WriteLine("FAILED: " + result.ErrorMessage);
                 // not valid
             }
         }
 
         public static TokenList<Tokens> Tokenize(string input)
         {
-            return SuperTokenizer.Instance.Tokenize(input);
+            return SuperTokenizer.tokenizer.Tokenize(input);
         }
 
-        private static Tokenizer<Tokens> Instance { get; } = new TokenizerBuilder<Tokens>()
-                .Match(Span.EqualTo("()"), Tokens.ParenPair)
-                .Match(Character.EqualTo('('), Tokens.LParen)
-                .Match(Character.EqualTo(')'), Tokens.RParen)
-                .Match(Character.EqualTo('#'), Tokens.Hash)
-                .Match(Character.EqualTo('$'), Tokens.Dollar)
-                .Match(Character.EqualTo('.'), Tokens.Dot)
-                .Match(Character.EqualTo('|'), Tokens.Pipe)
-                .Match(Character.EqualTo(' ').Or(Character.EqualTo('\t')), Tokens.Space)
-                .Match(Span.MatchedBy(Character.AnyChar), Tokens.Char)
-                .Match(Numerics.Natural, Tokens.Number)
-                .Build();
+        private static readonly Tokenizer<Tokens> tokenizer = new TokenizerBuilder<Tokens>()
+            .Match(Span.EqualTo("()"), Tokens.ParenPair)
+            .Match(Span.Regex(@"&[a-zA-Z0-9#]+;"), Tokens.Entity)
+            .Match(Character.EqualTo('('), Tokens.LParen)
+            .Match(Character.EqualTo(')'), Tokens.RParen)
+            .Match(Character.EqualTo('#'), Tokens.Hash)
+            .Match(Character.EqualTo('$'), Tokens.Dollar)
+            .Match(Character.EqualTo('.'), Tokens.Dot)
+            .Match(Character.EqualTo('|'), Tokens.Pipe)
+            .Match(Character.EqualTo(' ').Or(Character.EqualTo('\t')), Tokens.Space)
+            .Match(Span.MatchedBy(Character.AnyChar), Tokens.Char)
+            .Match(Numerics.Natural, Tokens.Number)
+            .Build();
+
+        public static Tokens GetToken(string v)
+        {
+            var result = Tokenize(v).ConsumeToken();
+            return result.HasValue ? result.Value.Kind : Tokens.None;
+        }
     }
 
     public abstract class Group
@@ -80,9 +87,8 @@ namespace SuperParser
             List<Group> groups = new List<Group>();
             foreach (var o in objs)
             {
-                Console.WriteLine(o.GetType());
                 groups.Add((o is GroupSet) ? (Group)
-                    new GroupSet(((GroupSet)o).Groups) : new GroupTerm((string)o)); 
+                    new GroupSet(((GroupSet)o).Groups) : new GroupTerm((string)o));
             }
             Groups = groups.ToArray();
         }
@@ -135,6 +141,7 @@ namespace SuperParser
         public readonly static TokenListParser<Tokens, Group> LiteralParser =
             from tokens in
                 Token.EqualTo(Tokens.ParenPair)
+                .Or(Token.EqualTo(Tokens.Entity))
                 .Or(Token.EqualTo(Tokens.Hash))
                 .Or(Token.EqualTo(Tokens.Dollar))
                 .Or(Token.EqualTo(Tokens.Dot))
@@ -151,7 +158,7 @@ namespace SuperParser
         /// Parses a full expression that may contain text expressions or nested sub-expressions
         /// e.g. "(a | b)", "( (a.c() | b) | (123 | c) )", etc.
         /// </summary>
-        public readonly static TokenListParser<Tokens, Group> GroupParser =
+        public readonly static TokenListParser<Tokens, Group> GroupParserX =
             from leadWs in WhitespaceParser
             from lp in Token.EqualTo(Tokens.LParen)
             from groups in LiteralParser
@@ -160,9 +167,25 @@ namespace SuperParser
                 .OptionalOrDefault()
             from rp in Token.EqualTo(Tokens.RParen)
             from trailWs in WhitespaceParser
-            // has to have at least two sides and one has to be non-null
+                // has to have at least two sides and one has to be non-null
             where groups.Length > 1 && groups.Any(node => node != null)
-                select Group.Create(groups.Select
+            select Group.Create(groups.Select
+                (node => node ?? new GroupTerm(string.Empty)).ToArray());
+
+        public readonly static TokenListParser<Tokens, Group> GroupParser =
+            from _1 in WhitespaceParser
+            from lp in Token.EqualTo(Tokens.LParen)
+            from _2 in WhitespaceParser
+            from groups in
+                LiteralParser.Where(node => node != null) // check for actual text node first
+                .Or(GroupParser)
+                .Or(LiteralParser) // then check to see if it's empty
+                .ManyDelimitedBy(Token.EqualTo(Tokens.Pipe))
+            from _3 in WhitespaceParser
+            from rp in Token.EqualTo(Tokens.RParen)
+            from _4 in WhitespaceParser
+            where groups.Length > 1 && groups.Any(node => node != null) // has to have at least two sides and one has to be non-null
+            select Group.Create(groups.Select
                     (node => node ?? new GroupTerm(string.Empty)).ToArray());
     }
 
@@ -194,7 +217,10 @@ namespace SuperParser
         Dot,
 
         [Token(Example = " ")]
-        Space
+        Space,
+
+        [Token(Example = "&nbsp;")]
+        Entity
     }
 
 }

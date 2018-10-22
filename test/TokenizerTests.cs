@@ -5,14 +5,17 @@ using NUnit.Framework;
 
 namespace SuperParser.Test
 {
-    //[TestFixture]
+    [TestFixture]
     public class TokenizerTests
     {
-        //[Test]
-        public void TokenizerTest1()
+        [Test]
+        public void TokenizeEntities()
         {
-            Assert.That(5, Is.EqualTo(5));
+            Assert.That(SuperTokenizer.GetToken("&nbsp;"), Is.EqualTo(Tokens.Entity));
+            Assert.That(SuperTokenizer.GetToken("&160;"), Is.EqualTo(Tokens.Entity));
+            Assert.That(SuperTokenizer.GetToken("&lt;"), Is.EqualTo(Tokens.Entity));
         }
+
 
     }
 }
