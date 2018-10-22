@@ -103,36 +103,19 @@ namespace Test
         /// Parses a full expression that may contain text expressions or nested sub-expressions
         /// e.g. "(a | b)", "( (a.c() | b) | (123 | c) )", etc.
         /// </summary>
-        //public readonly static TokenListParser<Tokens, Node> Expression =
-        //from leadWs in OptionalWhitespace
-        //from lp in Token.EqualTo(Tokens.LParen)
-        //from nodes in TextExpression
-        //    .Or(Parse.Ref(() => Expression))
-        //    .ManyDelimitedBy(Token.EqualTo(Tokens.Pipe))
-        //    .OptionalOrDefault()
-        //from rp in Token.EqualTo(Tokens.RParen)
-        //from trailWs in OptionalWhitespace
-        //where nodes.Length > 1 && nodes.Any(node => node != null) // has to have at least two sides and one has to be non-null
-        //select (Node)new Expression
-        //{
-        //    Nodes = nodes.Select(node => node ?? new TextNode { Value = "" }).ToArray()
-        //};
         public readonly static TokenListParser<Tokens, Node> Expression =
-            from ws1 in OptionalWhitespace
+            from _1 in OptionalWhitespace
             from lp in Token.EqualTo(Tokens.LParen)
-            from ws2 in OptionalWhitespace
+            from _2 in OptionalWhitespace
             from nodes in
-                // check for literal text first
-                TextExpression.Where(node => node != null) 
+                TextExpression.Where(node => node != null) // check for actual text node first
                 .Or(Expression)
-                .Or(TextExpression) // check to see if it's empty
+                .Or(TextExpression) // then check to see if it's empty
                 .ManyDelimitedBy(Token.EqualTo(Tokens.Pipe))
-            from ws3 in OptionalWhitespace
+            from _3 in OptionalWhitespace
             from rp in Token.EqualTo(Tokens.RParen)
-            from ws4 in OptionalWhitespace
-
-            // has to have at least two sides and one has to be non-null
-            where nodes.Length > 1 && nodes.Any(node => node != null) 
+            from _4 in OptionalWhitespace
+            where nodes.Length > 1 && nodes.Any(node => node != null) // has to have at least two sides and one has to be non-null
             select (Node)new Expression
             {
                 Nodes = nodes.Select(node => node ?? new TextNode { Value = "" }).ToArray()
