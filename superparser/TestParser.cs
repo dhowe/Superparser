@@ -48,7 +48,7 @@ namespace Test
             .Match(Numerics.Natural, Tokens.Number)
             .Build();
 
-        static void Main(string[] args)
+        static void MainX(string[] args)
         {
             string input = "((a | b) | c)";
             var tokens = tokenizer.Tokenize(input);
@@ -72,8 +72,8 @@ namespace Test
         /// Parses any whitespace (if any) and returns a resulting string
         /// </summary>
         public readonly static TokenListParser<Tokens, string> OptionalWhitespace =
-                    from chars in Token.EqualTo(Tokens.Whitespace).Many().OptionalOrDefault()
-                    select chars == null ? "" : new string(' ', chars.Length);
+            from chars in Token.EqualTo(Tokens.Whitespace).Many().OptionalOrDefault()
+            select chars == null ? "" : new string(' ', chars.Length);
 
         /// <summary>
         /// Parses a valid text expression
