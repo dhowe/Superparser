@@ -130,7 +130,8 @@ namespace SuperParser
         public string Text = string.Empty;
         public string Command = string.Empty;
 
-        public override string ToString() => "{'"+Actor + "','" + Text+"'}";
+        public override string ToString() => "{ actor: '"+Actor 
+            + "', cmd: '" + Command + "', text:'" + Text+"' }";
         public override bool Equals(object obj) => (obj is Line n
             && n.Actor.Equals(Actor) && n.Text.Equals(Text));
         public override int GetHashCode() => HashCode.Combine(Actor, Text);

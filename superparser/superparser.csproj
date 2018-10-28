@@ -12,5 +12,6 @@
   <ItemGroup>
     <Compile Remove="TestParser.cs" />
     <Compile Remove="FirstIInLine.cs" />
+    <Compile Remove="misc\FirstIInLine.cs" />
   </ItemGroup>
 </Project>
